@@ -1,5 +1,6 @@
 package com.flight.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -9,7 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 @Data
-@ToString(exclude = {"user", "flight", "passengers"})
+@ToString(exclude = {"user", "flight", "returnFlight", "passengers"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -30,6 +31,16 @@ public class Booking {
     @JoinColumn(name = "flight_id", nullable = false)
     private Flight flight;
 
+    @ManyToOne
+    @JoinColumn(name = "return_flight_id")
+    private Flight returnFlight;
+
+    @Column(nullable = false)
+    private String flightType = "ONE_WAY"; // ONE_WAY or ROUND_TRIP
+
+    @Column
+    private String mainFlightType; // OUTBOUND or RETURN
+
     @Column(nullable = false)
     private int numberOfPassengers;
 
@@ -43,5 +54,6 @@ public class Booking {
     private LocalDateTime bookingDate;
 
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<Passenger> passengers;
 }

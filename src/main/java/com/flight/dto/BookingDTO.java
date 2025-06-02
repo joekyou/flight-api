@@ -1,41 +1,83 @@
 package com.flight.dto;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.List;
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
+/**
+ * 预订数据传输对象
+ * 用于在前端和后端之间传输预订信息
+ */
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class BookingDTO {
-    
+    /**
+     * 预订ID
+     */
     private Long id;
     
+    /**
+     * 预订参考号
+     */
     private String bookingReference;
     
-    @NotNull(message = "航班ID不能为空")
+    /**
+     * 主航班ID（可能是出发航班或返程航班）
+     */
     private Long flightId;
     
+    /**
+     * 返程航班ID（仅往返行程时使用）
+     */
+    private Long returnFlightId;
+    
+    /**
+     * 用户ID
+     */
     private Long userId;
     
-    @NotNull(message = "乘客人数不能为空")
-    @Min(value = 1, message = "乘客人数必须大于0")
-    private Integer numberOfPassengers;
-    
-    private Double totalPrice;
-    
-    private String status;
-    
-    private LocalDateTime bookingDate;
-    
+    /**
+     * 主航班信息
+     */
     private FlightDTO flight;
     
-    @NotNull(message = "乘客信息不能为空")
-    @Valid
+    /**
+     * 返程航班信息
+     */
+    private FlightDTO returnFlight;
+    
+    /**
+     * 行程类型：ONE_WAY（单程）或 ROUND_TRIP（往返）
+     */
+    private String flightType;
+    
+    /**
+     * 主航班类型：OUTBOUND（出发）或 RETURN（返程）
+     * 用于标识用户主要选择的是出发航班还是返程航班
+     */
+    private String mainFlightType;
+    
+    /**
+     * 乘客数量
+     */
+    private int numberOfPassengers;
+    
+    /**
+     * 总价格
+     */
+    private double totalPrice;
+    
+    /**
+     * 预订状态
+     */
+    private String status;
+    
+    /**
+     * 预订日期
+     */
+    private LocalDateTime bookingDate;
+    
+    /**
+     * 乘客列表
+     */
     private List<PassengerDTO> passengers;
 }

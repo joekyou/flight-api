@@ -8,7 +8,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-
 @Data
 @ToString(exclude = {"departureAirport", "destinationAirport"})
 @NoArgsConstructor
@@ -20,20 +19,20 @@ public class Flight {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String flightNumber;
 
     @Column(nullable = false)
     private String airline;
 
-    @JsonBackReference("departing")
     @ManyToOne
     @JoinColumn(name = "departure_airport_id", nullable = false)
+    @JsonBackReference("departing")
     private Airport departureAirport;
 
-    @JsonBackReference("arriving")
     @ManyToOne
     @JoinColumn(name = "destination_airport_id", nullable = false)
+    @JsonBackReference("arriving")
     private Airport destinationAirport;
 
     @Column(nullable = false)

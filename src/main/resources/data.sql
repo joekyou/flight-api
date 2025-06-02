@@ -1,5 +1,5 @@
 -- Insert sample airports
-INSERT INTO c (code, name, city, country) VALUES
+INSERT INTO airports (code, name, city, country) VALUES
 ('JFK', 'John F. Kennedy International Airport', 'New York', 'USA'),
 ('LHR', 'Heathrow Airport', 'London', 'UK'),
 ('CDG', 'Charles de Gaulle Airport', 'Paris', 'France'),
