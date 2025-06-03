@@ -1,19 +1,25 @@
 package com.flight.service;
 
+import com.flight.dto.AirportDTO;
 import com.flight.dto.BookingDTO;
+import com.flight.dto.BookingPassengerDTO;
 import com.flight.dto.FlightDTO;
-import com.flight.dto.PassengerDTO;
+import com.flight.dto.UserPassengerDTO;
 import com.flight.entity.Booking;
+import com.flight.entity.BookingPassenger;
 import com.flight.entity.Flight;
-import com.flight.entity.Passenger;
 import com.flight.entity.User;
+import com.flight.entity.UserPassenger;
 import com.flight.repository.BookingRepository;
 import com.flight.repository.FlightRepository;
+import com.flight.repository.UserPassengerRepository;
 import com.flight.repository.UserRepository;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -28,16 +34,20 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final FlightRepository flightRepository;
     private final UserRepository userRepository;
+    private final UserPassengerRepository userPassengerRepository;
 
+    @Autowired
     public BookingService(BookingRepository bookingRepository, 
                          FlightRepository flightRepository,
-                         UserRepository userRepository) {
+                         UserRepository userRepository,
+                         UserPassengerRepository userPassengerRepository) {
         this.bookingRepository = bookingRepository;
         this.flightRepository = flightRepository;
         this.userRepository = userRepository;
+        this.userPassengerRepository = userPassengerRepository;
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional
     @Retryable(
         value = {CannotAcquireLockException.class},
         maxAttempts = 3,
@@ -48,27 +58,22 @@ public class BookingService {
         
         Flight mainFlight;
         Flight returnFlight = null;
-        String mainFlightType = bookingDTO.getMainFlightType(); // 使用前端传递的航班类型
+        String mainFlightType = bookingDTO.getMainFlightType();
 
-        // 根据前端传递的mainFlightType来确定主航班
         if ("OUTBOUND".equals(mainFlightType)) {
-            // 主航班是出发航班
             mainFlight = flightRepository.findById(bookingDTO.getFlightId())
                     .orElseThrow(() -> new RuntimeException("出发航班未找到"));
-            // 如果有返程航班ID，获取返程航班
             if (bookingDTO.getReturnFlightId() != null) {
                 returnFlight = flightRepository.findById(bookingDTO.getReturnFlightId())
                         .orElseThrow(() -> new RuntimeException("返程航班未找到"));
             }
         } else if ("RETURN".equals(mainFlightType)) {
-            // 主航班是返程航班（只选择了返程航班的情况）
             mainFlight = flightRepository.findById(bookingDTO.getFlightId())
                     .orElseThrow(() -> new RuntimeException("返程航班未找到"));
         } else {
             throw new RuntimeException("无效的航班类型");
         }
 
-        // 检查座位数量
         if (mainFlight.getAvailableSeats() < bookingDTO.getNumberOfPassengers()) {
             throw new RuntimeException("航班座位数不足");
         }
@@ -81,25 +86,29 @@ public class BookingService {
         booking.setFlight(mainFlight);
         booking.setReturnFlight(returnFlight);
         booking.setFlightType(returnFlight != null ? "ROUND_TRIP" : "ONE_WAY");
-        booking.setMainFlightType(mainFlightType); // 设置主航班类型
+        booking.setMainFlightType(mainFlightType);
         booking.setBookingDate(LocalDateTime.now());
         booking.setStatus("CONFIRMED");
         booking.setBookingReference(generateBookingReference());
         booking.setNumberOfPassengers(bookingDTO.getNumberOfPassengers());
         booking.setTotalPrice(calculateTotalPrice(mainFlight, returnFlight, bookingDTO.getNumberOfPassengers()));
 
-        if (bookingDTO.getPassengers() != null) {
-            booking.setPassengers(bookingDTO.getPassengers().stream()
-                .map(passengerDTO -> {
-                    Passenger passenger = new Passenger();
-                    passenger.setFirstName(passengerDTO.getFirstName());
-                    passenger.setLastName(passengerDTO.getLastName());
-                    passenger.setEmail(passengerDTO.getEmail());
-                    passenger.setPhone(passengerDTO.getPhone());
-                    passenger.setBooking(booking);
-                    return passenger;
-                })
-                .collect(Collectors.toList()));
+        // 处理乘客信息
+        if (bookingDTO.getPassengerIds() != null && !bookingDTO.getPassengerIds().isEmpty()) {
+            List<UserPassenger> passengers = userPassengerRepository.findAllById(bookingDTO.getPassengerIds());
+            List<BookingPassenger> bookingPassengers = new ArrayList<>();
+            
+            for (UserPassenger passenger : passengers) {
+                BookingPassenger bookingPassenger = new BookingPassenger();
+                bookingPassenger.setBooking(booking);
+                bookingPassenger.setPassenger(passenger);
+                bookingPassenger.setPassengerType(passenger.equals(passengers.get(0)) ? 
+                    com.flight.entity.enums.PassengerType.PRIMARY : 
+                    com.flight.entity.enums.PassengerType.ACCOMPANYING);
+                bookingPassengers.add(bookingPassenger);
+            }
+            
+            booking.setBookingPassengers(bookingPassengers);
         }
 
         // 更新主航班座位数
@@ -114,6 +123,119 @@ public class BookingService {
 
         Booking savedBooking = bookingRepository.save(booking);
         return convertToDTO(savedBooking);
+    }
+
+    private BookingDTO convertToDTO(Booking booking) {
+        BookingDTO dto = new BookingDTO();
+        dto.setId(booking.getId());
+        dto.setBookingReference(booking.getBookingReference());
+        dto.setFlightId(booking.getFlight().getId());
+        dto.setUserId(booking.getUser().getId());
+        dto.setNumberOfPassengers(booking.getNumberOfPassengers());
+        dto.setTotalPrice(booking.getTotalPrice());
+        dto.setStatus(booking.getStatus());
+        dto.setBookingDate(booking.getBookingDate());
+        dto.setFlightType(booking.getFlightType());
+        dto.setMainFlightType(booking.getMainFlightType());
+
+        if (booking.getReturnFlight() != null) {
+            dto.setReturnFlightId(booking.getReturnFlight().getId());
+        }
+
+        // 转换主航班
+        Flight flight = booking.getFlight();
+        FlightDTO flightDTO = convertFlightToDTO(flight);
+        dto.setFlight(flightDTO);
+
+        // 转换返程航班（如果有）
+        if (booking.getReturnFlight() != null) {
+            FlightDTO returnFlightDTO = convertFlightToDTO(booking.getReturnFlight());
+            dto.setReturnFlight(returnFlightDTO);
+        }
+
+        // 转换乘客信息
+        if (booking.getBookingPassengers() != null) {
+            List<BookingPassengerDTO> bookingPassengerDTOs = booking.getBookingPassengers().stream()
+                .map(bookingPassenger -> {
+                    BookingPassengerDTO bookingPassengerDTO = new BookingPassengerDTO();
+                    UserPassenger userPassenger = bookingPassenger.getPassenger();
+                    
+                    // 设置乘客基本信息
+                    UserPassengerDTO passengerDTO = new UserPassengerDTO();
+                    passengerDTO.setId(userPassenger.getId());
+                    passengerDTO.setFirstName(userPassenger.getFirstName());
+                    passengerDTO.setLastName(userPassenger.getLastName());
+                    passengerDTO.setEmail(userPassenger.getEmail());
+                    passengerDTO.setPhone(userPassenger.getPhone());
+                    
+                    // 设置预订乘客信息
+                    bookingPassengerDTO.setId(bookingPassenger.getId());
+                    bookingPassengerDTO.setPassenger(passengerDTO);
+                    bookingPassengerDTO.setPassengerType(bookingPassenger.getPassengerType());
+                    bookingPassengerDTO.setSeatPreference(bookingPassenger.getSeatPreference());
+                    bookingPassengerDTO.setSpecialRequirements(bookingPassenger.getSpecialRequirements());
+                    
+                    return bookingPassengerDTO;
+                })
+                .collect(Collectors.toList());
+            
+            dto.setBookingPassengers(bookingPassengerDTOs);
+        }
+
+        return dto;
+    }
+
+    private FlightDTO convertFlightToDTO(Flight flight) {
+        FlightDTO flightDTO = new FlightDTO();
+        flightDTO.setId(flight.getId());
+        flightDTO.setFlightNumber(flight.getFlightNumber());
+        flightDTO.setAirline(flight.getAirline());
+        
+        // 创建出发机场DTO
+        AirportDTO departureAirport = new AirportDTO(
+            flight.getDepartureAirport().getCode(),
+            flight.getDepartureAirport().getName()
+        );
+        flightDTO.setDepartureAirport(departureAirport);
+        
+        // 创建到达机场DTO
+        AirportDTO destinationAirport = new AirportDTO(
+            flight.getDestinationAirport().getCode(),
+            flight.getDestinationAirport().getName()
+        );
+        flightDTO.setArrivalAirport(destinationAirport);
+        
+        flightDTO.setDepartureTime(flight.getDepartureTime());
+        flightDTO.setArrivalTime(flight.getArrivalTime());
+        flightDTO.setPrice(flight.getPrice());
+        flightDTO.setAvailableSeats(flight.getAvailableSeats());
+        flightDTO.setAircraftType(flight.getAircraftType());
+        return flightDTO;
+    }
+
+    private User getUserFromAuthentication(Authentication authentication) {
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        return userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("用户未找到"));
+    }
+
+    private String generateBookingReference() {
+        return UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    private double calculateTotalPrice(Flight flight, Flight returnFlight, int passengers) {
+        double basePrice = flight.getPrice() * passengers;
+        double taxes = basePrice * 0.1; // 10% 税费
+        double totalPrice = basePrice + taxes;
+
+        if (returnFlight != null) {
+            double returnBasePrice = returnFlight.getPrice() * passengers;
+            double returnTaxes = returnBasePrice * 0.1;
+            totalPrice += returnBasePrice + returnTaxes;
+        }
+
+        double fees = 25 * passengers;  // 每位乘客25美元服务费
+        return totalPrice + fees;
     }
 
     public List<BookingDTO> getCurrentUserBookings(Authentication authentication, String status) {
@@ -145,7 +267,7 @@ public class BookingService {
         return convertToDTO(booking);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional
     @Retryable(
         value = {CannotAcquireLockException.class},
         maxAttempts = 3,
@@ -213,7 +335,7 @@ public class BookingService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional
     @Retryable(
         value = {CannotAcquireLockException.class},
         maxAttempts = 3,
@@ -225,92 +347,5 @@ public class BookingService {
         booking.setStatus(status);
         Booking updatedBooking = bookingRepository.save(booking);
         return convertToDTO(updatedBooking);
-    }
-
-    private BookingDTO convertToDTO(Booking booking) {
-        BookingDTO dto = new BookingDTO();
-        dto.setId(booking.getId());
-        dto.setBookingReference(booking.getBookingReference());
-        dto.setFlightId(booking.getFlight().getId());
-        dto.setUserId(booking.getUser().getId());
-        dto.setNumberOfPassengers(booking.getNumberOfPassengers());
-        dto.setTotalPrice(booking.getTotalPrice());
-        dto.setStatus(booking.getStatus());
-        dto.setBookingDate(booking.getBookingDate());
-        dto.setFlightType(booking.getFlightType());
-        dto.setMainFlightType(booking.getMainFlightType()); // 设置主航班类型
-
-        // 设置返程航班ID（如果有）
-        if (booking.getReturnFlight() != null) {
-            dto.setReturnFlightId(booking.getReturnFlight().getId());
-        }
-
-        // 转换主航班
-        Flight flight = booking.getFlight();
-        FlightDTO flightDTO = convertFlightToDTO(flight);
-        dto.setFlight(flightDTO);
-
-        // 转换返程航班（如果有）
-        if (booking.getReturnFlight() != null) {
-            FlightDTO returnFlightDTO = convertFlightToDTO(booking.getReturnFlight());
-            dto.setReturnFlight(returnFlightDTO);
-        }
-
-        // 转换乘客信息
-        if (booking.getPassengers() != null) {
-            dto.setPassengers(booking.getPassengers().stream()
-                .map(passenger -> {
-                    PassengerDTO passengerDTO = new PassengerDTO();
-                    passengerDTO.setId(passenger.getId());
-                    passengerDTO.setFirstName(passenger.getFirstName());
-                    passengerDTO.setLastName(passenger.getLastName());
-                    passengerDTO.setEmail(passenger.getEmail());
-                    passengerDTO.setPhone(passenger.getPhone());
-                    return passengerDTO;
-                })
-                .collect(Collectors.toList()));
-        }
-
-        return dto;
-    }
-
-    private FlightDTO convertFlightToDTO(Flight flight) {
-        FlightDTO flightDTO = new FlightDTO();
-        flightDTO.setId(flight.getId());
-        flightDTO.setFlightNumber(flight.getFlightNumber());
-        flightDTO.setAirline(flight.getAirline());
-        flightDTO.setDepartureAirport(flight.getDepartureAirport().getCode());
-        flightDTO.setDestinationAirport(flight.getDestinationAirport().getCode());
-        flightDTO.setDepartureTime(flight.getDepartureTime());
-        flightDTO.setArrivalTime(flight.getArrivalTime());
-        flightDTO.setPrice(flight.getPrice());
-        flightDTO.setAvailableSeats(flight.getAvailableSeats());
-        flightDTO.setAircraftType(flight.getAircraftType());
-        return flightDTO;
-    }
-
-    private User getUserFromAuthentication(Authentication authentication) {
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        return userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("用户未找到"));
-    }
-
-    private String generateBookingReference() {
-        return UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-    }
-
-    private double calculateTotalPrice(Flight flight, Flight returnFlight, int passengers) {
-        double basePrice = flight.getPrice() * passengers;
-        double taxes = basePrice * 0.1; // 10% 税费
-        double totalPrice = basePrice + taxes;
-
-        if (returnFlight != null) {
-            double returnBasePrice = returnFlight.getPrice() * passengers;
-            double returnTaxes = returnBasePrice * 0.1;
-            totalPrice += returnBasePrice + returnTaxes;
-        }
-
-        double fees = 25 * passengers;  // 每位乘客25美元服务费
-        return totalPrice + fees;
     }
 }

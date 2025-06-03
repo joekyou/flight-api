@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 @Data
-@ToString(exclude = {"user", "flight", "returnFlight", "passengers"})
+@ToString(exclude = {"user", "flight", "returnFlight", "bookingPassengers"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -55,5 +55,5 @@ public class Booking {
 
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
-    private List<Passenger> passengers;
+    private List<BookingPassenger> bookingPassengers;
 }

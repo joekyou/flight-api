@@ -59,7 +59,7 @@ public class BookingController {
         return ResponseEntity.ok(new BaseResponse<>(200, "获取预订详情成功", booking));
     }
 
-    @DeleteMapping("/{id}")
+    @PostMapping("/{id}/cancel")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<BaseResponse<Void>> cancelBooking(
             @PathVariable Long id,

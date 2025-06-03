@@ -12,8 +12,8 @@ public class FlightDTO {
     private Long id;
     private String flightNumber;
     private String airline;
-    private String departureAirport;
-    private String destinationAirport;
+    private AirportDTO departureAirport;
+    private AirportDTO arrivalAirport;
     private LocalDateTime departureTime;
     private LocalDateTime arrivalTime;
     private double price;

@@ -1,5 +1,6 @@
 package com.flight.dto;
 
+import com.flight.dto.FlightDTO;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Data;
@@ -77,7 +78,12 @@ public class BookingDTO {
     private LocalDateTime bookingDate;
     
     /**
-     * 乘客列表
+     * 乘客ID列表（用于创建预订时传递）
      */
-    private List<PassengerDTO> passengers;
+    private List<Long> passengerIds;
+    
+    /**
+     * 预订乘客信息列表（用于返回预订详情时）
+     */
+    private List<BookingPassengerDTO> bookingPassengers;
 }

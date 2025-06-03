@@ -1,27 +1,57 @@
 package com.flight.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
+import java.time.LocalDateTime;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
+/**
+ * 乘客数据传输对象
+ */
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class PassengerDTO {
-
     private Long id;
-
-    @NotBlank(message = "乘客名字不能为空")
+    
+    /**
+     * 用户ID
+     */
+    private Long userId;
+    
+    /**
+     * 预订ID（可选，仅当乘客与特定预订关联时使用）
+     */
+    private Long bookingId;
+    
+    /**
+     * 名字
+     */
     private String firstName;
-
-    @NotBlank(message = "乘客姓氏不能为空")
+    
+    /**
+     * 姓氏
+     */
     private String lastName;
-
-    @NotBlank(message = "乘客邮箱不能为空")
-    @Email(message = "请输入有效的邮箱地址")
+    
+    /**
+     * 电子邮件
+     */
     private String email;
-
+    
+    /**
+     * 电话号码
+     */
     private String phone;
+    
+    /**
+     * 是否为默认乘客
+     */
+    private boolean isDefault;
+    
+    /**
+     * 创建时间
+     */
+    private LocalDateTime createdAt;
+    
+    /**
+     * 更新时间
+     */
+    private LocalDateTime updatedAt;
 }

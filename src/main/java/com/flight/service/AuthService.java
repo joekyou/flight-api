@@ -49,7 +49,9 @@ public class AuthService {
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String token = jwtUtil.generateToken(authentication);
             
-            User user = (User) authentication.getPrincipal();
+            String email = authentication.getName();
+            User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
             UserDTO userDTO = modelMapper.map(user, UserDTO.class);
             userDTO.setToken(token);
             
@@ -82,7 +84,9 @@ public class AuthService {
     public ResponseEntity<?> checkAuth() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated()) {
-            User user = (User) authentication.getPrincipal();
+            String email = authentication.getName();
+            User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
             UserDTO userDTO = modelMapper.map(user, UserDTO.class);
             return ResponseEntity.ok(userDTO);
         }

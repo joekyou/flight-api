@@ -1,35 +1,28 @@
 package com.flight.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 
 /**
- * 乘客实体类
+ * 用户乘客实体类
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "passengers")
-public class Passenger {
+@Table(name = "user_passengers")
+public class UserPassenger {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-    
-    @ManyToOne
-    @JoinColumn(name = "booking_id")
-    @ToString.Exclude
-    @JsonBackReference
-    private Booking booking;
     
     @Column(nullable = false)
     private String firstName;
@@ -37,26 +30,19 @@ public class Passenger {
     @Column(nullable = false)
     private String lastName;
     
-    @Column(nullable = false)
     private String email;
     
     private String phone;
 
-    /**
-     * 是否为默认乘客
-     */
     @Column(name = "is_default")
     private boolean isDefault = false;
 
-    /**
-     * 创建时间
-     */
+    @OneToMany(mappedBy = "passenger")
+    private List<BookingPassenger> bookingPassengers;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    /**
-     * 更新时间
-     */
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 

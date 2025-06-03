@@ -15,7 +15,25 @@ INSERT INTO flights (flight_number, airline, departure_airport_id, destination_a
 ('CX888', 'Cathay Pacific', 4, 5, '2025-06-11 09:00:00', '2025-06-11 16:00:00', 650.00, 190, 'Airbus A350');
 
 -- Insert admin user
-INSERT INTO users (email, password, first_name, last_name, country, phone) VALUES
-('admin@flightapi.com', '$2a$10$GckdgpfIJ7J/W9qZ9u1XUOiYpwQglUFfcHxFQXPgZkM1KsQfKxlTi', 'Admin', 'User', 'USA', '1234567890'),
-('aaa@aaa.com', '$2a$10$GckdgpfIJ7J/W9qZ9u1XUOiYpwQglUFfcHxFQXPgZkM1KsQfKxlTi', 'Test', 'User', 'China', '1234567890');
+INSERT INTO users (email, password, first_name, last_name, country, phone, gender, age, address, zip_code, role) VALUES
+('admin@flightapi.com', '$2a$10$GckdgpfIJ7J/W9qZ9u1XUOiYpwQglUFfcHxFQXPgZkM1KsQfKxlTi', 'Admin', 'User', 'USA', '1234567890', 'Male', 35, '123 Admin Street, New York', '10001', 'ADMIN'),
+('aaa@aaa.com', '$2a$10$GckdgpfIJ7J/W9qZ9u1XUOiYpwQglUFfcHxFQXPgZkM1KsQfKxlTi', 'Test', 'User', 'China', '1234567890', 'Female', 28, '456 Test Road, Shanghai', '200000', 'USER');
+
+-- Insert default user passengers for test user
+INSERT INTO user_passengers (user_id, first_name, last_name, email, phone, is_default, created_at, updated_at) VALUES
+(2, 'Test', 'User', 'aaa@aaa.com', '1234567890', true, NOW(), NOW()),
+(2, 'John', 'Doe', 'john.doe@example.com', '1234567891', false, NOW(), NOW());
+
+-- Insert sample bookings
+INSERT INTO bookings (booking_reference, user_id, flight_id, return_flight_id, flight_type, main_flight_type, 
+                     number_of_passengers, total_price, status, booking_date) VALUES
+('ABC123', 2, 1, 2, 'ROUND_TRIP', 'OUTBOUND', 2, 1200.00, 'CONFIRMED', NOW()),
+('DEF456', 2, 3, NULL, 'ONE_WAY', 'OUTBOUND', 1, 520.00, 'CONFIRMED', NOW());
+
+-- Insert booking passengers
+INSERT INTO booking_passengers (booking_id, passenger_id, passenger_type, seat_preference, special_requirements, created_at, updated_at) VALUES
+(1, 1, 'PRIMARY', 'WINDOW', NULL, NOW(), NOW()),
+(1, 2, 'ACCOMPANYING', 'AISLE', NULL, NOW(), NOW()),
+(2, 1, 'PRIMARY', 'WINDOW', NULL, NOW(), NOW());
+
 -- Password for both users: zaq12wsx

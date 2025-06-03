@@ -32,4 +32,11 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
     List<Flight> findFlights(@Param("departure") String departure,
                            @Param("destination") String destination,
                            @Param("departureDate") LocalDateTime departureDate);
+
+    @Query("SELECT DISTINCT a.code FROM Flight f " +
+           "JOIN f.departureAirport a " +
+           "UNION " +
+           "SELECT DISTINCT a.code FROM Flight f " +
+           "JOIN f.destinationAirport a")
+    List<String> findAllAirports();
 }

@@ -16,7 +16,13 @@ CREATE TABLE IF NOT EXISTS users (
     last_name VARCHAR(100) NOT NULL,
     country VARCHAR(100),
     phone VARCHAR(20),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    gender VARCHAR(10),
+    age INTEGER,
+    address TEXT,
+    zip_code VARCHAR(20),
+    role VARCHAR(20) NOT NULL DEFAULT 'USER',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- 创建航班表
@@ -53,13 +59,33 @@ CREATE TABLE IF NOT EXISTS bookings (
     FOREIGN KEY (return_flight_id) REFERENCES flights(id)
 );
 
--- 创建乘客表
-CREATE TABLE IF NOT EXISTS passengers (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    booking_id BIGINT NOT NULL,
+-- 废弃原有乘客表
+DROP TABLE IF EXISTS passengers;
+
+-- 新建user_passengers表，保留is_default字段，添加唯一约束
+CREATE TABLE IF NOT EXISTS user_passengers (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     email VARCHAR(255),
-    phone VARCHAR(20),
-    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
+    phone VARCHAR(50),
+    is_default BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 新建booking_passengers关联表，添加乘客类型、座位偏好、特殊需求字段
+CREATE TABLE IF NOT EXISTS booking_passengers (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    booking_id BIGINT NOT NULL,
+    passenger_id BIGINT NOT NULL,
+    passenger_type ENUM('PRIMARY', 'ACCOMPANYING', 'CHILD', 'INFANT') NOT NULL DEFAULT 'ACCOMPANYING',
+    seat_preference VARCHAR(50),
+    special_requirements TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+    FOREIGN KEY (passenger_id) REFERENCES user_passengers(id) ON DELETE CASCADE
 );

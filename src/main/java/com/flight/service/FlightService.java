@@ -1,8 +1,10 @@
 package com.flight.service;
 
+import com.flight.dto.AirportDTO;
 import com.flight.dto.FlightDTO;
 import com.flight.entity.Flight;
 import com.flight.repository.FlightRepository;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -42,19 +44,23 @@ public class FlightService {
     }
 
     public List<FlightDTO> searchFlights(String departure, String destination, 
-            LocalDateTime departureDate, LocalDateTime returnDate) {
+            LocalDate departDate, LocalDate returnDate, int passengers) {
+        // 转换日期为DateTime，设置时间为00:00:00
+        LocalDateTime departureDateTime = departDate.atStartOfDay();
+        LocalDateTime returnDateTime = returnDate != null ? returnDate.atStartOfDay() : null;
+        
         // 查询出发当天的航班
         List<Flight> departureFlights = flightRepository.findFlights(
-            departure, destination, departureDate);
+            departure, destination, departureDateTime);
         
         List<FlightDTO> result = departureFlights.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
 
         // 如果有返程日期，查询返程当天的航班
-        if (returnDate != null) {
+        if (returnDateTime != null) {
             List<Flight> returnFlights = flightRepository.findFlights(
-                destination, departure, returnDate);
+                destination, departure, returnDateTime);
             
             result.addAll(returnFlights.stream()
                     .map(this::convertToDTO)
@@ -64,13 +70,30 @@ public class FlightService {
         return result;
     }
 
+    public List<String> getAllAirports() {
+        return flightRepository.findAllAirports();
+    }
+
     private FlightDTO convertToDTO(Flight flight) {
         FlightDTO dto = new FlightDTO();
         dto.setId(flight.getId());
         dto.setFlightNumber(flight.getFlightNumber());
         dto.setAirline(flight.getAirline());
-        dto.setDepartureAirport(flight.getDepartureAirport().getCode());
-        dto.setDestinationAirport(flight.getDestinationAirport().getCode());
+        
+        // 设置出发机场信息
+        AirportDTO departureAirport = new AirportDTO(
+            flight.getDepartureAirport().getCode(),
+            flight.getDepartureAirport().getName()
+        );
+        dto.setDepartureAirport(departureAirport);
+        
+        // 设置到达机场信息
+        AirportDTO arrivalAirport = new AirportDTO(
+            flight.getDestinationAirport().getCode(),
+            flight.getDestinationAirport().getName()
+        );
+        dto.setArrivalAirport(arrivalAirport);
+        
         dto.setDepartureTime(flight.getDepartureTime());
         dto.setArrivalTime(flight.getArrivalTime());
         dto.setPrice(flight.getPrice());

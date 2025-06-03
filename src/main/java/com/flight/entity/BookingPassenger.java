@@ -1,62 +1,46 @@
 package com.flight.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.flight.entity.enums.PassengerType;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 
 /**
- * 乘客实体类
+ * 预订乘客关联实体类
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "passengers")
-public class Passenger {
+@Table(name = "booking_passengers")
+public class BookingPassenger {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-    
-    @ManyToOne
-    @JoinColumn(name = "booking_id")
-    @ToString.Exclude
-    @JsonBackReference
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_id", nullable = false)
     private Booking booking;
     
-    @Column(nullable = false)
-    private String firstName;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "passenger_id", nullable = false)
+    private UserPassenger passenger;
     
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String lastName;
+    private PassengerType passengerType = PassengerType.ACCOMPANYING;
     
-    @Column(nullable = false)
-    private String email;
+    @Column(name = "seat_preference")
+    private String seatPreference;
     
-    private String phone;
+    @Column(name = "special_requirements")
+    private String specialRequirements;
 
-    /**
-     * 是否为默认乘客
-     */
-    @Column(name = "is_default")
-    private boolean isDefault = false;
-
-    /**
-     * 创建时间
-     */
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    /**
-     * 更新时间
-     */
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
