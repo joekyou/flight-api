@@ -144,4 +144,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## AWS
 qiaozhe-flight-api
-Public IP 3.27.169.252
+Public IP 3.27.114.196
